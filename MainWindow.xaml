@@ -1,0 +1,97 @@
+﻿<Window x:Class="WayneDoctorFusionIFSF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WayneDoctorFusionIFSF"
+        xmlns:gif="http://wpfanimatedgif.codeplex.com"
+        mc:Ignorable="d"
+        Title="Wayne Doctor" Height="860" Width="1030">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Menu Grid.Row="0" Grid.Column="0" IsMainMenu="True" Height="31" VerticalAlignment="Top" Style="{StaticResource MainMenu}"  >
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="32"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150"></ColumnDefinition>
+                    <ColumnDefinition Width="360"></ColumnDefinition>
+                    <ColumnDefinition Width="10"></ColumnDefinition>
+                    <ColumnDefinition Width="150"></ColumnDefinition>
+                    <ColumnDefinition Width="10"></ColumnDefinition>
+                    <ColumnDefinition Width="100"></ColumnDefinition>
+                    <ColumnDefinition Width="150"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Label Grid.Row="0" Grid.Column="0" Content="Connection Status:" HorizontalAlignment="Right"></Label>
+                <Label Grid.Row="0" Grid.Column="1" Name="lblConnectionStatus" Width="400" Content="Not Connected" HorizontalAlignment="Left"></Label>
+                <Image Grid.Row="0" Grid.Column="2" Source="Images/mnu_hSpacerGrid.gif"></Image>
+                <Label Grid.Row="0" Grid.Column="3" Name="lblLogonSatus" Width="400" Content="Not Logon" ></Label>
+                <Image Grid.Row="0" Grid.Column="4" Source="Images/mnu_hSpacerGrid.gif"></Image>
+                <Label Grid.Row="0" Grid.Column="5" Content="Hearbeat"></Label>
+                <Image Grid.Row="0" Grid.Column="6" Name="gifHeartBeat" gif:ImageBehavior.AnimatedSource="Images/heartbeat1.gif"  Visibility="Hidden"   />
+            </Grid>
+        </Menu>
+        <Grid Grid.Row="1" Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"></RowDefinition>
+                <RowDefinition Height="Auto"></RowDefinition>
+                <RowDefinition Height="Auto"></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Row="0" Grid.Column="0" Height="50" Width="1020" >
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Row="0" Grid.Column="0" Name="btnGetDeviceConfig" Content="GetDeviceConfig" Width="160" Height="40" IsEnabled="False" Click="Button_GetSDeviceConfig_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="1" Name="btnProducts" Content="Products" Width="160" Height="40"  IsEnabled="False" Click="Button_Products_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="2" Name="btnGrades" Content="Grades" Width="160" Height="40"  IsEnabled="False" Click="btnGrades_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="3" Name="btnTanks" Content="Tanks" Width="160" Height="40" IsEnabled="False"></Button>
+                <Button Grid.Row="0" Grid.Column="4" Name="btnFuelPoints" Content="FuelPoints" Width="160" Height="40"  IsEnabled="False"></Button>
+            </Grid>
+            <Grid Grid.Row="1" Grid.Column="0" Height="400" Width="1020">
+                <TextBox Name="txtBoxRequests" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                         Width="980" Height="398" Style="{StaticResource TextBoxStyle1}" >
+                    
+                </TextBox>
+            </Grid>
+            <Grid Grid.Row="2" Grid.Column="0" Height="60" Width="1020">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="60"></RowDefinition>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="200"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Row="0" Grid.Column="0" Name="btnAll" Content="Config All" Width="160" Height="40"  IsEnabled="False"></Button>
+                <Button Grid.Row="0" Grid.Column="2" Name="btnSend" Content="Send" Width="160" Height="40"  IsEnabled="False" Click="btnSend_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="3" Name="btnClearRequestBox" Content="Clear Request" Width="160" Height="40"  IsEnabled="False" Click="btnClearRequestBox_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="4" Name="btnClearReceivedBox" Content="Clear Received" Width="160" Height="40"  IsEnabled="False" Click="btnClearReceivedBox_Click"></Button>
+            </Grid>
+        </Grid>
+        <Grid Grid.Row="2" Grid.Column="0">
+            <TextBox x:Name="txtBoxReceived" Width="980" Height="270" Style="{StaticResource TextBoxStyle1}" 
+                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"></TextBox>
+        </Grid>
+    </Grid>
+</Window>
