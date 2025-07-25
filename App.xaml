@@ -38,7 +38,7 @@
             <Setter Property="AllowDrop" Value="true"/>
             <Setter Property="ScrollViewer.PanningMode" Value="VerticalFirst"/>
             <Setter Property="Stylus.IsFlicksEnabled" Value="False"/>
-            
+
         </Style>
         <!--<Style x:Key="ImageButton" TargetType="Button">
             <Setter Property="ContentTemplate">

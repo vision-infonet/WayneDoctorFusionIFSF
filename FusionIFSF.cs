@@ -41,9 +41,10 @@ namespace WayneDoctorFusionIFSF
         private static string HASHID = "0001";
         private static string APPLICATIONSENDER = "1";
         private static string WORKSTATIONID = System.Net.Dns.GetHostName().Substring(0,8);
-        private static string INTERFACEVERSION = "01.00";
+        private static string INTERFACEVERSION = "1.0";
         private ServiceRequest serviceRequest = null;
         internal Queue<string> sendingQueue = new Queue<string>();
+        internal Dictionary<string, string> preSendingDictionary = new Dictionary<string, string>();
         private int ReqeustID = 0;
         private ReaderWriterLockSlim requestIDReaderWriterLockSlim = new ReaderWriterLockSlim();
         private ManualResetEvent lostHeartbeatManualResetEvent = new ManualResetEvent(false);
@@ -51,7 +52,7 @@ namespace WayneDoctorFusionIFSF
         private static long MAX_LOG_FILE_LENGTH = 1000000;
         private delegate void WriteLogDelegate(string s);
         private WriteLogDelegate writeLogDelegate, writeHeartbeatLogDelegate, writePollingLogDelegate;
-        public bool OFFLINE = false;
+        public bool LogOn = false;
         internal Dictionary<string, Control> WindowControlDictionary;
         internal Dictionary<string, Image> WindowImageDictionary;
         internal delegate void SetControlValueDelegate(object control, object[] myparams);
@@ -60,8 +61,19 @@ namespace WayneDoctorFusionIFSF
         internal EnableButtons EnableButtonsDelegate;
         internal List<Product> products = new List<Product>();
         internal List<Grade> grades = new List<Grade>();
+        internal List<FuelPoint> FuelPoints = new List<FuelPoint>();
+        internal List<Tank> tanks = new List<Tank>();
+        internal List<TankSuction> tanksSuctions = new List<TankSuction>();
+        internal Dictionary<string, FuelPoint> fuelPointsDictionary = new Dictionary<string, FuelPoint>();
         internal Dictionary<string, string> MeasureUnitDictionary;
         public Dictionary<string, Dictionary<string, Product>> PumpProductDictionary = new Dictionary<string, Dictionary<string, Product>>();
+        public static string LogOnString = "<?xml version=\"1.0\" encoding=\"utf-16\"?>"
+                                + "<ServiceRequest RequestType = \"LogOn\" ApplicationSender=\"1\" WorkstationID=\"{WorkstationID}\" RequestID=\"{RequestID}\">"
+                                + "  <POSdata>"
+                                + "    <POSTimeStamp>{POSTimeStamp}</POSTimeStamp>"
+                                + "    <InterfaceVersion>{InterfaceVersion}</InterfaceVersion>"
+                                + "  </POSdata>"
+                                + "</ServiceRequest>";
         public enum RequestType
         {
             LogOn,
@@ -69,6 +81,10 @@ namespace WayneDoctorFusionIFSF
             ConfigStart,
             ConfigEnd,
             DefProducts,
+            DefGrades,
+            DefTanks,
+            DefTankSuctions,
+            DefFuelPoints,
             GetProductTable,
             GetFPState,
             AuthoriseFuelPoint,
@@ -218,10 +234,14 @@ namespace WayneDoctorFusionIFSF
         [Serializable]
         public class POSdata
         {
-            public string POSTimeStamp { get; set; }
             public string InterfaceVersion { get; set; }
+            public string POSTimeStamp { get; set; }
             public DeviceClass DeviceClass { get; set; }
             public Product[] Products { get; set; }
+            public Grade[] Grades { get; set; }
+            public Tank[] Tanks { get; set; }
+            public TankSuction[] TankSuctions { get; set; }
+            public FuelPoint[] FuelPoints { get; set; }
             public string Emergencystop { get; set; }
         }
 
@@ -276,7 +296,7 @@ namespace WayneDoctorFusionIFSF
         public class Product
         {
             [XmlAttribute]
-            public string ID { get; set; }
+            public string Id { get; set; }
             //public FuelMode FuelMode { get; set; }
             //public string PositionID { get; set; }
             [XmlAttribute]
@@ -285,6 +305,7 @@ namespace WayneDoctorFusionIFSF
             public string UnitOfMeasure { get; set; }
             public string NozzleNo { get; set; }
             public decimal[] FuelPrice { get; set; }
+            [XmlIgnore]
             public ProductBlend productBlend = ProductBlend.non;
             //[XmlAttribute]
             //public decimal UnitPrice { get; set; }//for discount usage
@@ -293,12 +314,29 @@ namespace WayneDoctorFusionIFSF
         [Serializable]
         public class Grade
         {
-            public string ID { get; set; }
+            [XmlAttribute]
+            public string Id { get; set; }
+            [XmlAttribute]
             public string Name { get; set; }
+            [XmlAttribute]
             public string ProductHighId { get; set; }
+            [XmlAttribute]
             public string ProductLowId { get; set; }
+            [XmlAttribute]
             public string ProductHighPerc { get; set; }
+            [XmlAttribute]
             public string ProductLowPerc { get; set; }
+        }
+
+        public class FuelPoint
+        {
+            [XmlAttribute]
+            public string Id { get; set; }
+            public string PumpProtocol { get; set; }
+            public string PumpType { get; set; }
+            public string ComChannelId { get; set; }
+            public string PhysicalAddress { get; set; }
+            public List<Nozzle> Nozzles { get; set; }
         }
 
         public class FuelMode
@@ -310,12 +348,37 @@ namespace WayneDoctorFusionIFSF
         public class Nozzle
         {
             [XmlAttribute]
+            public string Id { get; set; }
+            [XmlAttribute]
             public string NozzleNo { get; set; }
+            [XmlAttribute]
+            public string GradeId { get; set; }
+            [XmlAttribute]
+            public string TankSuctionId { get; set; }
+            [XmlAttribute]
+            public string TankSuctionLowId { get; set; }
             public string LogicalNozzle { get; set; }
             public string LogicalState { get; set; }
             public string TankLogicalState { get; set; }
         }
-
+        public class Tank
+        {
+            [XmlAttribute]
+            public string Id { get; set; }
+            [XmlAttribute]
+            public string GradeId { get; set; }
+            [XmlAttribute]
+            public string Capacity { get; set; }
+        }
+        public class TankSuction
+        {
+            [XmlAttribute]
+            public string Id { get; set; }
+            [XmlAttribute]
+            public string LogicalId { get; set; }
+            public string Type { get; set; }
+            public Tank[] Tanks { get; set; }
+        }
         #endregion
 
         #region methods
@@ -381,7 +444,7 @@ namespace WayneDoctorFusionIFSF
                 {
                     DataTable dt = _db.ExecuteDataTable("SELECT p.ProdID,g.FullName, p.UOM, g.ID as ID, g.Ratio, p.ProdBlend" 
                                                       + " FROM CSCPump.dbo.Product p RIGHT OUTER JOIN CSCPump.dbo.Grade g "
-                                                      +" on p.Stock_Code = g.Stock_Code", Data.CommandType.Text);
+                                                      +" on p.Stock_Code = g.Stock_Code ORDER BY p.ProdID", Data.CommandType.Text);
                     foreach (DataRow dr in dt.Rows)
                     {
                         ProductBlend _productBlend = ProductBlend.non;
@@ -390,8 +453,8 @@ namespace WayneDoctorFusionIFSF
                         {
                             products.Add(new Product()
                             {
-                                ID = dr["ProdID"].ToString(),
-                                Name = dr["FullName"].ToString(),
+                                Id = dr["ProdID"].ToString(),
+                                Name = dr["FullName"].ToString().ToUpper(),
                                 UnitOfMeasure = (MeasureUnitDictionary.ContainsKey(dr["UOM"].ToString())) ?
                                            MeasureUnitDictionary[dr["UOM"].ToString()] : "gallons",
                                 productBlend = _productBlend
@@ -402,14 +465,84 @@ namespace WayneDoctorFusionIFSF
                     {
                         grades.Add(new Grade()
                         {
-                            ID = dr["ID"].ToString(),
-                            Name = dr["FullName"].ToString(),
-                            ProductHighId = (string.IsNullOrEmpty(dr["ProdID"].ToString()) && dr["Ratio"].ToString() == "0") ?
-                               products.FirstOrDefault(x=>x.productBlend== ProductBlend.High).ID : dr["ProdID"].ToString(),
-                            ProductHighPerc = (dr["Ratio"].ToString() == "0") ? "100": dr["Ratio"].ToString(),
-                            ProductLowId = (string.IsNullOrEmpty(dr["ProdID"].ToString()) && dr["Ratio"].ToString() == "0") ?
-                               products.FirstOrDefault(x => x.productBlend == ProductBlend.Low).ID : null
+                            Id = string.IsNullOrEmpty(dr["ID"].ToString())? string.Empty: dr["ID"].ToString(),
+                            Name = dr["FullName"].ToString().ToUpper(),
+                            ProductHighId = (string.IsNullOrEmpty(dr["ProdID"].ToString()) && dr["Ratio"].ToString() != "0") ?
+                               products.FirstOrDefault(x => x.productBlend == ProductBlend.High).Id : dr["ProdID"].ToString(),
+                            ProductHighPerc = (dr["Ratio"].ToString() == "0") ? "100" : dr["Ratio"].ToString(),
+                            ProductLowId = (string.IsNullOrEmpty(dr["ProdID"].ToString()) && dr["Ratio"].ToString() != "0") ?
+                               products.FirstOrDefault(x => x.productBlend == ProductBlend.Low).Id : null,
+                            ProductLowPerc = (dr["Ratio"].ToString() == "0") ? null : (100 - int.Parse(dr["Ratio"].ToString())).ToString()
                         });
+                    }
+                    dt = _db.ExecuteDataTable("SELECT ti.Id,ti.GradeID, tt.Capacity FROM CSCPump.dbo.TankInfo ti JOIN CSCPump.dbo.TankType tt on ti.TankCode = tt.TankCode", Data.CommandType.Text);
+                    foreach (DataRow dr in dt.Rows)
+                    {
+                        tanks.Add(new Tank()
+                        {
+                             Id = dr["ID"].ToString(),
+                             GradeId = dr["GradeId"].ToString(),
+                             Capacity = dr["Capacity"].ToString().Replace(".00",string.Empty)
+                        });
+                    }
+
+                    dt = _db.ExecuteDataTable("SELECT * FROM CSCPump.dbo.TankSuction", Data.CommandType.Text);
+                    foreach (DataRow dr in dt.Rows)
+                    {
+                        List<Tank> _tanks = new List<Tank>();
+                        foreach (string s in dr["TankIds"].ToString().Split(new char[] { ',' }))
+                        {
+                            _tanks.Add(new Tank() { Id = s });
+                        }
+                        tanksSuctions.Add(new TankSuction()
+                        {
+                            Id = $"SUCTION{dr["Id"].ToString()}",
+                            LogicalId = dr["LogicalId"].ToString(),
+                            Type = dr["Type"].ToString().TrimEnd(new char[] {' ' }),
+                            Tanks = _tanks.ToArray()
+                        });
+                    }
+
+                    dt = _db.ExecuteDataTable("SELECT p.ID AS ID, fp.PumpProtocol AS PumpProtocol, fp.PumpType AS PumpType,"
+                        + "fp.ComChannelID AS ComChannelID,fp.PhysicalAddress AS PhysicalAddress"
+                        + " FROM CSCPump.dbo.Pump p JOIN CSCPump.dbo.DefFuelPoints fp on p.ID = fp.FuelPointID", 
+                        Data.CommandType.Text);
+                    foreach (DataRow dr in dt.Rows)
+                    {
+                        fuelPointsDictionary.Add(dr["ID"].ToString(), new FuelPoint()
+                        {
+                             Id = dr["ID"].ToString(),
+                             PumpProtocol = dr["PumpProtocol"].ToString(),
+                             ComChannelId = dr["ComChannelID"].ToString(),
+                             PumpType= dr["PumpType"].ToString(),
+                             PhysicalAddress = dr["PhysicalAddress"].ToString()
+                        });
+                    }
+                    DataTable assignmentDt = _db.ExecuteDataTable("SELECT pa.PumpID, pa.PositionID, pa.GradeID, ta.TankSuctionID, ta.TankSuctionLowID "
+                        + " FROM CSCPump.dbo.Assignment pa JOIN CSCPump.dbo.[TankSuctionAssignment] ta ON pa.PumpID = ta.PumpID AND pa.GradeID = ta.GradeID"
+                        , Data.CommandType.Text);
+                    {
+                        foreach (DataRow dr in assignmentDt.Rows)
+                        {
+                            if (fuelPointsDictionary.ContainsKey(dr["PumpID"].ToString()))
+                            {
+                                if (fuelPointsDictionary[dr["PumpID"].ToString()].Nozzles == null)
+                                    fuelPointsDictionary[dr["PumpID"].ToString()].Nozzles = new List<Nozzle>();
+                                fuelPointsDictionary[dr["PumpID"].ToString()].Nozzles.Add(
+                                    new Nozzle()
+                                    {
+                                        Id = dr["PositionID"].ToString(), 
+                                        GradeId = dr["GradeID"].ToString(), 
+                                        TankSuctionId = $"SUCTION{dr["TankSuctionID"].ToString()}",
+                                        TankSuctionLowId = string.IsNullOrEmpty(dr["TankSuctionLowID"].ToString()) ? 
+                                        null : $"SUCTION{dr["TankSuctionLowID"].ToString()}"
+                                    });
+                            }
+                        }
+                    }
+                    foreach (KeyValuePair<string, FuelPoint> kv in fuelPointsDictionary)
+                    {
+                        FuelPoints.Add(kv.Value);
                     }
                 }
             }
@@ -437,22 +570,26 @@ namespace WayneDoctorFusionIFSF
                     $"{System.Configuration.ConfigurationManager.AppSettings["FusionIFSF_IP"].ToString()}" +
                     $"   Port: {System.Configuration.ConfigurationManager.AppSettings["FusionIFSF_PORT"].ToString()}" });
                 ThreadPool.QueueUserWorkItem(new WaitCallback(this.ShowHeartBeat));
-                ServiceRequest _request = Clone(serviceRequest);
-                _request.RequestType = RequestType.LogOn;
-                _request.POSdata = new POSdata()
-                {
-                    InterfaceVersion = INTERFACEVERSION,
-                    POSTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
-                };
 
-                // Send logon message
-                string myqueue = string.Empty;
-                using (StringWriter stringWriter = new StringWriter())
-                {
-                    _xmlserializerServiceRequest.Serialize(stringWriter, _request);
-                    myqueue = stringWriter.ToString();
-                }
-                sendingQueue.Enqueue(myqueue);
+                //ServiceRequest _request = Clone(serviceRequest);
+                //_request.RequestType = RequestType.LogOn;
+                //_request.POSdata = new POSdata()
+                //{
+                //    InterfaceVersion = INTERFACEVERSION,
+                //    POSTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
+                //};
+
+                //// Send logon message
+                //string myqueue = string.Empty;
+                //using (StringWriter stringWriter = new StringWriter())
+                //{
+                //    _xmlserializerServiceRequest.Serialize(stringWriter, _request);
+                //    myqueue = stringWriter.ToString();
+                //}
+                sendingQueue.Enqueue(LogOnString.Replace("{InterfaceVersion}", INTERFACEVERSION)
+                                                .Replace("{WorkstationID}", WORKSTATIONID)
+                                                .Replace("{RequestID}",GetRequestID())
+                                                .Replace("{POSTimeStamp}", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")));
 
                 Thread.Sleep(5000);
             }
@@ -482,6 +619,7 @@ namespace WayneDoctorFusionIFSF
                     myqueue = stringWriter.ToString();
                 }
                 sendingQueue.Enqueue(myqueue);
+                LogOn = false;
             }
             catch (Exception ex)
             {
@@ -557,9 +695,11 @@ namespace WayneDoctorFusionIFSF
                             ServiceResponse resp = (ServiceResponse)_xmlserializerServiceResponse.Deserialize(r);
                             if (resp.OverallResult.ToUpper().Contains("SUCCESS"))
                             {
-                                this.EnableButtonsDelegate.Invoke();
+                                LogOn = true;
+                                //this.EnableButtonsDelegate.Invoke();
                                 SetControlValue(WindowControlDictionary["lblLogonSatus"], new object[] { "Logon Success" });
                             }
+                            LogAcitvity($"Receive:\r\n{FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty))}");
                         }
 
                     }
@@ -603,8 +743,49 @@ namespace WayneDoctorFusionIFSF
                             //}
                         }
                     }
+                    else if (s.Contains("ConfigStart"))
+                    {
+                        SetControlValue(WindowControlDictionary["progressBar"], new object[] { 1 });
+                        string temp = FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty));
+                        LogAcitvity($"Receive:\r\n{temp}");
+                        SetControlValue(WindowControlDictionary["txtBoxReceived"], new object[] { temp });
+                    }
+                    else if(s.Contains("DefProducts"))
+                    {
+                        SetControlValue(WindowControlDictionary["progressBar"], new object[] { 2 });
+                        string temp = FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty));
+                        LogAcitvity($"Receive:\r\n{temp}");
+                        SetControlValue(WindowControlDictionary["txtBoxReceived"], new object[] { temp });
+                    }
+                    else if (s.Contains("DefGrades"))
+                    {
+                        SetControlValue(WindowControlDictionary["progressBar"], new object[] { 3 });
+                        string temp = FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty));
+                        LogAcitvity($"Receive:\r\n{temp}");
+                        SetControlValue(WindowControlDictionary["txtBoxReceived"], new object[] { temp });
+
+                    }
+                    else if (s.Contains("DefFuelPoints"))
+                    {
+                        SetControlValue(WindowControlDictionary["progressBar"], new object[] { 4 });
+                        string temp = FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty));
+                        LogAcitvity($"Receive:\r\n{temp}");
+                        SetControlValue(WindowControlDictionary["txtBoxReceived"], new object[] { temp });
+
+                    }
+                    else if (s.Contains("ConfigEnd"))
+                    {
+                        SetControlValue(WindowControlDictionary["progressBar"], new object[] { 5 });
+                        string temp = FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty));
+                        LogAcitvity($"Receive:\r\n{temp}");
+                        SetControlValue(WindowControlDictionary["txtBoxReceived"], new object[] { temp });
+                    }
                     else
-                        LogAcitvity($"Receive:\r\n{FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty))}");
+                    {
+                        string temp = FormattedXMLLog(s.Replace(xmlns_receive_xsd, string.Empty).Replace(xmlns_receive_xsi, string.Empty));
+                        LogAcitvity($"Receive:\r\n{temp}");
+                        SetControlValue(WindowControlDictionary["txtBoxReceived"], new object[] { temp });
+                    }
                 }
                 
 
@@ -641,7 +822,7 @@ namespace WayneDoctorFusionIFSF
                     LogAcitvity($"Error in SendingQueueThread(): {ex.ToString()} ");
                     continue;
                 }
-                Thread.Sleep(200);
+                Thread.Sleep(2000);
             }
         }
 
@@ -890,13 +1071,15 @@ namespace WayneDoctorFusionIFSF
         #endregion
 
         #region handle button events
-        internal string BuildConfigStartEnd()
+        internal void BuildConfigStartEnd()
         {
-            StringBuilder _sb = new StringBuilder();
+            //StringBuilder _sb = new StringBuilder();
             try
             {
+                preSendingDictionary.Clear();
                 ServiceRequest _request = Clone(serviceRequest);
                 _request.RequestType = RequestType.ConfigStart;
+                _request.RequestID = GetRequestID();
                 _request.POSdata = new POSdata()
                 {
                     InterfaceVersion = INTERFACEVERSION,
@@ -908,10 +1091,12 @@ namespace WayneDoctorFusionIFSF
                     _xmlserializerServiceRequest.Serialize(stringWriter, _request);
                     myqueue = stringWriter.ToString();
                 }
-                _sb.Append(myqueue);
+                //_sb.Append(myqueue);
+                preSendingDictionary.Add("START", myqueue.Replace(xmlns_send_xsd, string.Empty).Replace(xmlns_send_xsi, string.Empty));
 
                 _request = Clone(serviceRequest);
                 _request.RequestType = RequestType.ConfigEnd;
+                _request.RequestID = GetRequestID();
                 _request.POSdata = new POSdata()
                 {
                     POSTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
@@ -921,19 +1106,20 @@ namespace WayneDoctorFusionIFSF
                     _xmlserializerServiceRequest.Serialize(stringWriter, _request);
                     myqueue = stringWriter.ToString();
                 }
-                _sb.Append($"\r\nMY_REQUESTS\r\n{myqueue}");
+                //_sb.Append($"\r\nMY_REQUESTS\r\n{myqueue}");
+                preSendingDictionary.Add("END", myqueue.Replace(xmlns_send_xsd, string.Empty).Replace(xmlns_send_xsi, string.Empty));
             }
             catch (Exception ex)
             {
                 LogAcitvity($"Error in BuildConfigStartEnd(): {ex.ToString()}");
             }
-            return _sb.ToString();
+            //return _sb.ToString();
         }
-        internal void BuildProductsCommand()
+
+        internal string BuildProductsCommand()
         {
             try
             {
-                string _startEnd = BuildConfigStartEnd();
                 ServiceRequest _request = Clone(serviceRequest);
                 _request.RequestType = RequestType.DefProducts;
                 _request.POSdata = new POSdata()
@@ -947,13 +1133,139 @@ namespace WayneDoctorFusionIFSF
                     _xmlserializerServiceRequest.Serialize(stringWriter, _request);
                     myqueue = stringWriter.ToString();
                 }
-                SetControlValue(WindowControlDictionary["txtBoxRequests"], 
-                    new object[] { _startEnd.Replace("MY_REQUESTS", myqueue.Replace(" <Products>", string.Empty).Replace(" </Products>", string.Empty)) });
+                return  myqueue.Replace(" <Products>", string.Empty).Replace(" </Products>", string.Empty).Replace(xmlns_send_xsd, string.Empty).Replace(xmlns_send_xsi, string.Empty);
             }
             catch (Exception ex)
             {
                 LogAcitvity($"Error in BuildProductsCommand(): {ex.ToString()}");
+                return string.Empty;
             }
+        }
+
+        internal string BuildGradesCommand()
+        {
+            try
+            {
+                ServiceRequest _request = Clone(serviceRequest);
+                _request.RequestType = RequestType.DefGrades;
+                _request.POSdata = new POSdata()
+                {
+                    POSTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    Grades = grades.ToArray()
+                };
+                string myqueue = string.Empty;
+                using (StringWriter stringWriter = new StringWriter())
+                {
+                    _xmlserializerServiceRequest.Serialize(stringWriter, _request);
+                    myqueue = stringWriter.ToString();
+                }
+                return  myqueue.Replace(" <Grades>", string.Empty).Replace(" </Grades>", string.Empty);
+            }
+            catch (Exception ex)
+            {
+                LogAcitvity($"Error in BuildGradesCommand(): {ex.ToString()}");
+                return string.Empty;
+            }
+        }
+
+        internal string BuildTanksCommand()
+        {
+            try
+            {
+                ServiceRequest _request = Clone(serviceRequest);
+                _request.RequestType = RequestType.DefTanks;
+                _request.POSdata = new POSdata()
+                {
+                    POSTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    Tanks = tanks.ToArray()
+                };
+                string myqueue = string.Empty;
+                using (StringWriter stringWriter = new StringWriter())
+                {
+                    _xmlserializerServiceRequest.Serialize(stringWriter, _request);
+                    myqueue = stringWriter.ToString();
+                }
+                return myqueue.Replace(" <Tanks>", string.Empty).Replace(" </Tanks>", string.Empty);
+            }
+            catch (Exception ex)
+            {
+                LogAcitvity($"Error in BuildGradesCommand(): {ex.ToString()}");
+                return string.Empty;
+            }
+        }
+
+        internal string BuildTankSuctionCommand()
+        {
+            try
+            {
+                ServiceRequest _request = Clone(serviceRequest);
+                _request.RequestType = RequestType.DefTankSuctions;
+                _request.POSdata = new POSdata()
+                {
+                    POSTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    TankSuctions = tanksSuctions.ToArray()
+                };
+                string myqueue = string.Empty;
+                using (StringWriter stringWriter = new StringWriter())
+                {
+                    _xmlserializerServiceRequest.Serialize(stringWriter, _request);
+                    myqueue = stringWriter.ToString();
+                }
+                return myqueue.Replace("<TankSuctions>", string.Empty).Replace("</TankSuctions>", string.Empty)
+                    .Replace("<Tanks>", string.Empty).Replace("</Tanks>", string.Empty)
+                    .Replace(xmlns_send_xsd, string.Empty).Replace(xmlns_send_xsi, string.Empty);
+            }
+            catch (Exception ex)
+            {
+                LogAcitvity($"Error in BuildProductsCommand(): {ex.ToString()}");
+                return string.Empty;
+            }
+        }
+        internal string BuildFuelPointsCommand()
+        {
+            try
+            {
+                ServiceRequest _request = Clone(serviceRequest);
+                _request.RequestType = RequestType.DefFuelPoints;
+                _request.POSdata = new POSdata()
+                {
+                    POSTimeStamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"),
+                    FuelPoints = FuelPoints.ToArray()
+                };
+                string myqueue = string.Empty;
+                using (StringWriter stringWriter = new StringWriter())
+                {
+                    _xmlserializerServiceRequest.Serialize(stringWriter, _request);
+                    myqueue = stringWriter.ToString();
+                }
+                return myqueue.Replace(" <FuelPoints>", string.Empty).Replace(" </FuelPoints>", string.Empty)
+                    .Replace("<Nozzles>",string.Empty).Replace("</Nozzles>", string.Empty);
+            }
+            catch (Exception ex)
+            {
+                LogAcitvity($"Error in BuildFuelPointsCommand(): {ex.ToString()}");
+                return string.Empty;
+            }
+        }
+
+        internal string BuildAll()
+        {
+            try
+            {
+                StringBuilder _sb = new StringBuilder();
+                _sb.Append(BuildProductsCommand())
+                   .Append(BuildGradesCommand())
+                   .Append(BuildTanksCommand())
+                   .Append(BuildTankSuctionCommand())
+                   .Append(BuildFuelPointsCommand());
+                return (_sb.ToString());
+            }
+            catch (Exception ex)
+            {
+                LogAcitvity($"Error in BuildAll(): {ex.ToString()}");
+                return string.Empty;
+            }
+
         }
         #endregion
 
@@ -991,7 +1303,6 @@ namespace WayneDoctorFusionIFSF
 
             }
         }
-
         public void LogAcitvity(string s)
         {
             writeLogDelegate.BeginInvoke(s, null, null);
@@ -1017,8 +1328,6 @@ namespace WayneDoctorFusionIFSF
 
             }
         }
-
-        
         public void WriteHeartbeatLog(string str)
         {
             try

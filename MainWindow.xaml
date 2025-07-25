@@ -36,7 +36,7 @@
                 <Image Grid.Row="0" Grid.Column="2" Source="Images/mnu_hSpacerGrid.gif"></Image>
                 <Label Grid.Row="0" Grid.Column="3" Name="lblLogonSatus" Width="400" Content="Not Logon" ></Label>
                 <Image Grid.Row="0" Grid.Column="4" Source="Images/mnu_hSpacerGrid.gif"></Image>
-                <Label Grid.Row="0" Grid.Column="5" Content="Hearbeat"></Label>
+                <Label Grid.Row="0" Grid.Column="5" Name="lblHeartBeat"  Content="Hearbeat"></Label>
                 <Image Grid.Row="0" Grid.Column="6" Name="gifHeartBeat" gif:ImageBehavior.AnimatedSource="Images/heartbeat1.gif"  Visibility="Hidden"   />
             </Grid>
         </Menu>
@@ -54,27 +54,29 @@
                     <RowDefinition Height="50"></RowDefinition>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300"></ColumnDefinition>
                     <ColumnDefinition Width="200"></ColumnDefinition>
+                    <!--<ColumnDefinition Width="200"></ColumnDefinition>-->
                     <ColumnDefinition Width="200"></ColumnDefinition>
-                    <ColumnDefinition Width="200"></ColumnDefinition>
-                    <ColumnDefinition Width="200"></ColumnDefinition>
-                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="300"></ColumnDefinition>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Row="0" Grid.Column="0" Name="btnGetDeviceConfig" Content="GetDeviceConfig" Width="160" Height="40" IsEnabled="False" Click="Button_GetSDeviceConfig_Click"></Button>
-                <Button Grid.Row="0" Grid.Column="1" Name="btnProducts" Content="Products" Width="160" Height="40"  IsEnabled="False" Click="Button_Products_Click"></Button>
-                <Button Grid.Row="0" Grid.Column="2" Name="btnGrades" Content="Grades" Width="160" Height="40"  IsEnabled="False" Click="btnGrades_Click"></Button>
-                <Button Grid.Row="0" Grid.Column="3" Name="btnTanks" Content="Tanks" Width="160" Height="40" IsEnabled="False"></Button>
-                <Button Grid.Row="0" Grid.Column="4" Name="btnFuelPoints" Content="FuelPoints" Width="160" Height="40"  IsEnabled="False"></Button>
+                <Button Grid.Row="0" Grid.Column="0" Name="btnGetDeviceConfig" Content="GetDeviceConfig" Width="260" Height="40" Click="Button_GetSDeviceConfig_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="3" Name="btnAll" Content="Create Device Config" Width="260" Height="40" Click="btnAll_Click" ></Button>
+                <!--<Button Grid.Row="0" Grid.Column="1" Name="btnProducts" Content="Products" Width="160" Height="40"   Click="Button_Products_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="2" Name="btnGrades" Content="Grades" Width="160" Height="40"   Click="btnGrades_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="3" Name="btnTanks" Content="Tanks" Width="160" Height="40" ></Button>
+                <Button Grid.Row="0" Grid.Column="4" Name="btnFuelPoints" Content="FuelPoints" Width="160" Height="40" Click="btnFuelPoints_Click" ></Button>-->
             </Grid>
-            <Grid Grid.Row="1" Grid.Column="0" Height="400" Width="1020">
-                <TextBox Name="txtBoxRequests" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                         Width="980" Height="398" Style="{StaticResource TextBoxStyle1}" >
-                    
+            <Grid Grid.Row="1" Grid.Column="0" Height="370" Width="1020">
+                <TextBox Name="txtBoxRequests" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Visible"
+                         Width="980" Height="368" Style="{StaticResource TextBoxStyle1}" IsReadOnly="False" TextWrapping="Wrap"
+                         AcceptsReturn="True" AcceptsTab="True">
                 </TextBox>
             </Grid>
-            <Grid Grid.Row="2" Grid.Column="0" Height="60" Width="1020">
+            <Grid Grid.Row="2" Grid.Column="0" Height="62" Width="1020">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="60"></RowDefinition>
+                    <RowDefinition Height="41"></RowDefinition>
+                    <RowDefinition Height="21"></RowDefinition>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="200"></ColumnDefinition>
@@ -83,15 +85,15 @@
                     <ColumnDefinition Width="200"></ColumnDefinition>
                     <ColumnDefinition Width="200"></ColumnDefinition>
                 </Grid.ColumnDefinitions>
-                <Button Grid.Row="0" Grid.Column="0" Name="btnAll" Content="Config All" Width="160" Height="40"  IsEnabled="False"></Button>
-                <Button Grid.Row="0" Grid.Column="2" Name="btnSend" Content="Send" Width="160" Height="40"  IsEnabled="False" Click="btnSend_Click"></Button>
-                <Button Grid.Row="0" Grid.Column="3" Name="btnClearRequestBox" Content="Clear Request" Width="160" Height="40"  IsEnabled="False" Click="btnClearRequestBox_Click"></Button>
-                <Button Grid.Row="0" Grid.Column="4" Name="btnClearReceivedBox" Content="Clear Received" Width="160" Height="40"  IsEnabled="False" Click="btnClearReceivedBox_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="0" Name="btnSend" Content="Send" Width="160" Height="40"  Click="btnSend_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="3" Name="btnClearRequestBox" Content="Clear Request" Width="160" Height="40"  Click="btnClearRequestBox_Click"></Button>
+                <Button Grid.Row="0" Grid.Column="4" Name="btnClearReceivedBox" Content="Clear Received" Width="160" Height="40"  Click="btnClearReceivedBox_Click"></Button>
+                <ProgressBar Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Name="progressBar" Height="20"  Margin="20,1,21,1"/>
             </Grid>
         </Grid>
         <Grid Grid.Row="2" Grid.Column="0">
             <TextBox x:Name="txtBoxReceived" Width="980" Height="270" Style="{StaticResource TextBoxStyle1}" 
-                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"></TextBox>
+                     HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"  AcceptsReturn="True"  ></TextBox>
         </Grid>
     </Grid>
 </Window>
